@@ -1,0 +1,1288 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adfkpmgdemo"
+		},
+		"AzureBlobStorageLS_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureBlobStorageLS'"
+		},
+		"AzureSqlDatabaseLS_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabaseLS'"
+		},
+		"ShebinTestDB_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ShebinTestDB'"
+		},
+		"ShebinTestDB_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'ShebinTestDB'"
+		},
+		"ShebinTestDB_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "shebin"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureBlobStorageLS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureBlobStorageLS_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabaseLS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSqlDatabaseLS_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/irkpmgdemo')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "SelfHosted",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pipeline1')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Set variable1",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "DataSource",
+							"value": {
+								"value": "\"Test2\"",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"variables": {
+					"DataSource": {
+						"type": "String",
+						"defaultValue": "\"Test\""
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DestinationBlob')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorageLS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"triggerStart": {
+						"type": "string",
+						"defaultValue": "2021-06-30 17:48:47.670"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@concat(formatDateTime(utcnow(),'yyyyMMddHHmmssfff'),'.csv')",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat('Stage_F4111/incremental/',formatDateTime(utcnow(),'yyyy/MM/dd'))",
+							"type": "Expression"
+						},
+						"container": "destination"
+					},
+					"columnDelimiter": "|",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": ""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorageLS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceAzureSQL')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabaseLS",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "Stage",
+					"table": "F4111"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabaseLS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ShebinTestDB')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('ShebinTestDB_connectionString')]",
+					"userName": "[parameters('ShebinTestDB_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('ShebinTestDB_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "irkpmgdemo",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/irkpmgdemo')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PipelineAzureSQLToBlobF4111')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "GetLastWatermarkValue",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "Select WatermarkValue from dbo.Watermark WHERE TableName='Stage.F4111'",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "SourceAzureSQL",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "GetCurrentMaxWatermarkValue",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "Select Max(cast([ILTDAY] as bigint)) CurrentMaxWatermarkValue from Stage.F4111",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "SourceAzureSQL",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "RecordCheckConfition",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "GetRecordCount",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(int(activity('GetRecordCount').output.firstRow.RecordCount),0)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "CopyData_F4111_Load",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "declare @CurrentMaxWatermarkValue bigint, @LastWatermarkValue bigint; SET @CurrentMaxWatermarkValue = @{activity('GetCurrentMaxWatermarkValue').output.firstrow.CurrentMaxWatermarkValue} SET @LastWatermarkValue =@{activity('GetLastWatermarkValue').output.firstrow.WatermarkValue} SELECT * FROM Stage.F4111 WITH (NOLOCK) WHERE (cast([ILTDAY] as bigint) > @LastWatermarkValue) AND (cast([ILTDAY] as bigint) <= @CurrentMaxWatermarkValue)",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobStorageWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "ILNLIN",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILNLIN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILITM",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILITM",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLITM",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLITM",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILAITM",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILAITM",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILMCU",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILMCU",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLOCN",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLOCN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLOTN",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLOTN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILPLOT",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILPLOT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILSTUN",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILSTUN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLDSQ",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILLDSQ",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTRNO",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILTRNO",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILFRTO",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILFRTO",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLMCX",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLMCX",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLOTS",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLOTS",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLOTP",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILLOTP",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLOTG",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLOTG",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILKIT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILKIT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILMMCU",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILMMCU",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILDMCT",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILDMCT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILDMCS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILDMCS",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILKCO",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILKCO",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILDOC",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILDOC",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILDCT",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILDCT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILSFX",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILSFX",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILJELN",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILJELN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILICU",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILICU",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILDGL",
+														"type": "Int32",
+														"physicalType": "numeric"
+													},
+													"sink": {
+														"name": "ILDGL",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILGLPT",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILGLPT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILDCTO",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILDCTO",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILDOCO",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILDOCO",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILKCOO",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILKCOO",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLNID",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILLNID",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILIPCD",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILIPCD",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTRDJ",
+														"type": "Int32",
+														"physicalType": "numeric"
+													},
+													"sink": {
+														"name": "ILTRDJ",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTRUM",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILTRUM",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILAN8",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILAN8",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTREX",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILTREX",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTREF",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILTREF",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILRCD",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILRCD",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTRQT",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILTRQT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILUNCS",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILUNCS",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILPAID",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILPAID",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTERM",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILTERM",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILUKID",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILUKID",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTDAY",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILTDAY",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILUSER",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILUSER",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILPID",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILPID",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILCRDJ",
+														"type": "Int32",
+														"physicalType": "numeric"
+													},
+													"sink": {
+														"name": "ILCRDJ",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILAID",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILAID",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILASID",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILASID",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILMCUZ",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILMCUZ",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILOBJ",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILOBJ",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILSBL",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILSBL",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILSUB",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILSUB",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILUOM2",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILUOM2",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILCMOO",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILCMOO",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILRE",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILRE",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILSBLT",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILSBLT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILSQOR",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILSQOR",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILVPEJ",
+														"type": "Int32",
+														"physicalType": "numeric"
+													},
+													"sink": {
+														"name": "ILVPEJ",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILHDGJ",
+														"type": "Int32",
+														"physicalType": "numeric"
+													},
+													"sink": {
+														"name": "ILHDGJ",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILSHAN",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILSHAN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILOPSQ",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILOPSQ",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILRFLN",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILRFLN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILTGN",
+														"type": "Int32",
+														"physicalType": "decimal"
+													},
+													"sink": {
+														"name": "ILTGN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLOTC",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLOTC",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILSVDT",
+														"type": "Int32",
+														"physicalType": "numeric"
+													},
+													"sink": {
+														"name": "ILSVDT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLRCD",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLRCD",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILRLOT",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILRLOT",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILLPNU",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILLPNU",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILPMPN",
+														"type": "Int32",
+														"physicalType": "nchar"
+													},
+													"sink": {
+														"name": "ILPMPN",
+														"type": "String",
+														"physicalType": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ILPNS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ILPNS",
+														"type": "String",
+														"physicalType": "String"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "SourceAzureSQL",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "DestinationBlob",
+											"type": "DatasetReference",
+											"parameters": {
+												"triggerStart": "2021-06-30 17:48:47.670"
+											}
+										}
+									]
+								},
+								{
+									"name": "UpdateWatermarkvalue",
+									"type": "Lookup",
+									"dependsOn": [
+										{
+											"activity": "CopyData_F4111_Load",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "update dbo.Watermark SET  WatermarkValue= @{activity('GetCurrentMaxWatermarkValue').output.firstrow.CurrentMaxWatermarkValue} WHERE TableName='Stage.F4111'; Select 1",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"dataset": {
+											"referenceName": "SourceAzureSQL",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "GetRecordCount",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "GetLastWatermarkValue",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "GetCurrentMaxWatermarkValue",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "declare @CurrentMaxWatermarkValue bigint, @LastWatermarkValue bigint; SET @CurrentMaxWatermarkValue = @{activity('GetCurrentMaxWatermarkValue').output.firstrow.CurrentMaxWatermarkValue} SET @LastWatermarkValue =@{activity('GetLastWatermarkValue').output.firstrow.WatermarkValue} SELECT count(1) AS RecordCount FROM Stage.F4111 WITH (NOLOCK) WHERE (cast([ILTDAY] as bigint) > @LastWatermarkValue) AND (cast([ILTDAY] as bigint) <= @CurrentMaxWatermarkValue)",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "SourceAzureSQL",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-12-06T11:31:56Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/SourceAzureSQL')]",
+				"[concat(variables('factoryId'), '/datasets/DestinationBlob')]"
+			]
+		}
+	]
+}
