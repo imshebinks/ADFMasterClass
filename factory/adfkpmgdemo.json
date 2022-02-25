@@ -1,0 +1,9 @@
+{
+	"name": "adfkpmgdemo",
+	"location": "centralus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "6e9d3afa-4677-42c9-9220-bac09be50068",
+		"tenantId": "adbbbd82-76e5-4952-8531-3cc59f3c1fdd"
+	}
+}

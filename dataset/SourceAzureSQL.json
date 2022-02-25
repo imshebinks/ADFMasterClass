@@ -1,0 +1,17 @@
+{
+	"name": "SourceAzureSQL",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabaseLS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "Stage",
+			"table": "F4111"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
